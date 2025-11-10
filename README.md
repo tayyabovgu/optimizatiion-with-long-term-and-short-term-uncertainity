@@ -1,2 +1,14 @@
-# optimizatiion-with-long-term-and-short-term-uncertainity
-Holistic approach for microgrid planning for e-mobility infrastructure under consideration of long-term uncertainty
+# optimizatiion-with-long-term-uncertainty
+
+Cite:
+Muhammad Tayyab, Ines Hauer, Sebastian Helm,
+Holistic approach for microgrid planning for e-mobility infrastructure under consideration of long-term uncertainty,
+Sustainable Energy, Grids and Networks,
+Volume 34,
+2023,
+101073,
+ISSN 2352-4677,
+https://doi.org/10.1016/j.segan.2023.101073.
+(https://www.sciencedirect.com/science/article/pii/S2352467723000814)
+Abstract: Integrating renewable energy sources in sectors such as electricity, heat, and transportation has to be planned economically, technologically, and emission-efficient to address global environmental issues. Microgrids appear to be the solution for large-scale renewable energy integration in these sectors. The microgrid components must be optimally planned and operated to prevent high costs, technical issues, and emissions. Existing approaches for optimal microgrid planning and operation in the literature do not include a solution for e-mobility infrastructure development. Consequently, the authors provide a compact new methodology that considers the placement and the stochastic evolution of e-mobility infrastructure. In this new methodology, a retropolation approach to forecast the rise in the number of electric vehicles, a monte-carlo simulation for electric vehicle (EV) charging behaviors, a method for the definition of electric vehicle charging station (EVCS) numbers based on occupancy time, and public EVCS placement based on monte-carlo simulation have been developed. A deterministic optimization strategy for the planning and operation of microgrids is created using the abovementioned methodologies, which additionally consider technical power system issues. As the future development of e-mobility infrastructure has high associated uncertainties, a new stochastic method referred to as the information gap decision method (IGDM) is proposed. This method provides a risk-averse strategy for microgrid planning and operation by including long-term uncertainty related to e-mobility. Finally, the deterministic and stochastic methodologies are combined in a novel holistic approach for microgrid design and operation in terms of cost, emission, and robustness. The proposed method has been tested in a new settlement area in Magdeburg, Germany, under three different EV development scenarios (negative, trend, and positive). EVs are expected to reach 31 percent of the total number of cars in the investigated settlement area. Due to this, three public electric vehicle charging stations will be required in the 2031 trend scenario. Thus, the investigated settlement area requires a total cost of 127,029 €. In association with possible uncertainties, the cost of the microgrid must be raised by 80 percent to gain complete robustness against long-term risks in the development of EVCS.
+Keywords: Electric vehicle charging station; Electric vehicle; Monte-Carlo simulation; Information gap decision method; E-mobility infrastructure; Holistic approach; Optimizations; Sector coupling
