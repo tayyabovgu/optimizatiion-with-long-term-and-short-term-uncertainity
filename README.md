@@ -1,4 +1,3 @@
-Here is a high-quality, humanized README file for your GitHub repository. I've written this from your perspective, acknowledging the code's complexity and the journey we took to get it working.
 
 Holistic Microgrid Planning for E-Mobility Infrastructure
 This repository contains the complete MATLAB implementation for the methodology described in the paper: "Holistic approach for microgrid planning for e-mobility infrastructure under consideration of long-term uncertainty" (Sustainable Energy, Grids and Networks, 2023).
