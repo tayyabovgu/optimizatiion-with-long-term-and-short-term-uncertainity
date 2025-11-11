@@ -1,10 +1,4 @@
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% MAIN_create_all_scenarios.m (v15)
-%
-% This version adds a 'DEBUG_SAVE_DETAILS' flag.
-% When true, it saves the 1-minute SOC and driving data for the first
-% 10 EVs, which is required by 'plot_ev_validation_figures.m'.
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 clc;
 clear;
@@ -29,16 +23,13 @@ SCENARIOS_TO_RUN = {'Negative', 'Trend', 'Positive'};
 NUM_YEARS = 10;
 opt.Horizon = 8760; % 1-hour resolution
 
-% *** NEW DEBUG FLAG ***
-% Set this to true to save the 1-minute data needed for the new plots
+% --- This flag is still used by plot_ev_validation_figures.m ---
 DEBUG_SAVE_DETAILS = true; 
 
 % --- EV Parameters from Paper ---
 PCS_PRIVATE = 11.0; % 11 kW private charging
 PCS_PUBLIC = 22.0;  % 22 kW public charging
 PRIVATE_CHARGE_PERCENT = 0.85;
-PUBLIC_CHARGE_PERCENT = 0.15;
-CHARGE_THRESHOLD_SOC = 0.85; % From battery_EV.lowest_soc
 
 %% ### 1. GENERATE PROBABILITY DISTRIBUTIONS (Run Once) ###
 % -------------------------------------------------------------------------
@@ -92,46 +83,52 @@ for s = 1:length(SCENARIOS_TO_RUN)
             EV_beh{y} = struct('Private_Load_kW', zeros(1, opt.Horizon), ...
                                'Public_Load_kW', zeros(1, opt.Horizon), ...
                                'Public_Waiting_Time_hrs', zeros(1, opt.Horizon), ...
-                               'v_is_charging', zeros(1, opt.Horizon));
+                               'v_is_charging_request', zeros(1, opt.Horizon));
             continue;
         end
         
         % --- Step 3a: Run 1-minute Monte Carlo Simulation ---
-        behaviours = run_ev_simulation(PCS_PUBLIC, nEV, 2, pdf_travel);
+        % This generates the *truth* for 1-minute private charging
+        behaviours = run_ev_simulation(PCS_PRIVATE, nEV, 2, pdf_travel);
         
-        % Extract 1-minute profiles
-        soc_1min = behaviours.soc; 
-        is_driving_1min = behaviours.v_is_driving; 
-        
-        % --- Step 3b: Aggregate to 1-Hour "Charge Requests" ---
-        soc_1h_blocks = reshape(soc_1min, [nEV, 60, opt.Horizon]);
-        is_driving_1h_blocks = reshape(is_driving_1min, [nEV, 60, opt.Horizon]);
-        
-        soc_at_hour_end = squeeze(soc_1h_blocks(:, 60, :)); 
-        was_driving_in_hour = squeeze(any(is_driving_1h_blocks, 2)); 
-        is_at_home = ~was_driving_in_hour;
-        
-        EV_Profile_Requests = (soc_at_hour_end < CHARGE_THRESHOLD_SOC) & is_at_home;
-        EV_Profile_Requests = double(EV_Profile_Requests); 
-        
-        % --- Step 3c: Split Requests (85% Private vs. 15% Public) ---
-        [ev_idx, hour_idx] = find(EV_Profile_Requests);
+        % --- Step 3b: Split 1-min charging events (85% / 15%) ---
+        % Find all [EV, Minute] pairs where a private charge happened
+        [ev_idx, min_idx] = find(behaviours.v_is_charging);
         num_requests = length(ev_idx);
+        
+        % Create a random decision (Private vs Public) for each event
         rand_split = rand(num_requests, 1);
         
-        Private_Load_kW = zeros(1, opt.Horizon);
+        % Initialize 1-hour aggregate profiles
+        % We count *minutes* of charging per hour, then convert to kWh
+        Private_Charge_Minutes_1hr = zeros(nEV, opt.Horizon);
         Public_Charge_Request_Profile = zeros(nEV, opt.Horizon);
-        
+
         for i = 1:num_requests
             ev = ev_idx(i);
-            hr = hour_idx(i);
+            minute_of_year = min_idx(i);
+            
+            % Convert the minute-of-year to an hour-of-year (1 to 8760)
+            hr = floor((minute_of_year - 1) / 60) + 1;
             
             if rand_split(i) <= PRIVATE_CHARGE_PERCENT
-                Private_Load_kW(hr) = Private_Load_kW(hr) + PCS_PRIVATE; 
+                % --- This is a Private Charging minute (85%) ---
+                Private_Charge_Minutes_1hr(ev, hr) = Private_Charge_Minutes_1hr(ev, hr) + 1;
             else
+                % --- This is a Public Charging minute (15%) ---
+                % If *any* minute in this hour is a public request,
+                % flag the *entire hour* as a request for the queue model.
                 Public_Charge_Request_Profile(ev, hr) = 1;
             end
         end
+        
+        % --- Step 3c: Calculate Final Private Load ---
+        % Sum all EV charging-minutes for each hour
+        total_private_minutes_per_hour = sum(Private_Charge_Minutes_1hr, 1);
+        % Convert minutes of charging at 11kW to an average hourly kW load
+        % (e.g., 60 minutes * (11 kW / 60 min/hr) = 11 kWh)
+        % (e.g., 30 minutes * (11 kW / 60 min/hr) = 5.5 kWh)
+        Private_Load_kW = total_private_minutes_per_hour * (PCS_PRIVATE / 60);
         
         % --- Step 3d: Simulate the Public Queue ---
         nEVCS_for_year = 1; % Default
@@ -165,17 +162,15 @@ for s = 1:length(SCENARIOS_TO_RUN)
         year_results.Private_Load_kW = Private_Load_kW;
         year_results.Public_Load_kW = Public_Load_kW;
         year_results.Public_Waiting_Time_hrs = Public_Waiting_Time_hrs;
-        year_results.v_is_charging = EV_Profile_Requests(1:min(nEV, end), :); % Store requests
+        year_results.v_is_charging_request = Public_Charge_Request_Profile(1:min(nEV, end), :);
         
-        % *** NEW: SAVE DEBUG DATA ***
+        % *** SAVE DEBUG DATA (Unchanged) ***
         if DEBUG_SAVE_DETAILS
-            num_to_save = min(nEV, 10); % Save up to 10 EVs
-            % We need to save the 1-minute *private* charging profile
-            private_charge_1min = behaviours.v_is_charging;
-            
+            num_to_save = min(nEV, 10); 
             year_results.debug_soc_1min = behaviours.soc(1:num_to_save, :);
             year_results.debug_driving_1min = behaviours.v_is_driving(1:num_to_save, :);
-            year_results.debug_private_charge_1min = private_charge_1min(1:num_to_save, :);
+            % Save the *original* 1-min private charging profile
+            year_results.debug_private_charge_1min = behaviours.v_is_charging(1:num_to_save, :);
             fprintf('       ...Saved 1-minute debug data for %d EVs.\n', num_to_save);
         end
         

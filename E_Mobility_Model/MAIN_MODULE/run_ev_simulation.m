@@ -1,8 +1,4 @@
 function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
-    % v14 Refactor: This is a pure function.
-    % It accepts pdf_travel as an argument and returns behaviours.
-    % It no longer uses ANY global variables.
-
     %% 1. Initialize Local Parameters
     mc_params.days = 365;
     mc_params.periods_per_day = 1440;
@@ -22,7 +18,6 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
     battery_EV.fcharge_periods = ceil(battery_EV.fcharge_minutes);
     battery_EV.full_soc = 0.9;
     battery_EV.lowest_soc = 0.85;
-
     %% 2. Initialize Behavior Struct
     behaviours.v_is_driving = false(mc_params.total_EVs, mc_params.total_periods_year);
     behaviours.v_is_charging = false(mc_params.total_EVs, mc_params.total_periods_year);
@@ -41,7 +36,6 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
         driving.num = int32(RandByPDF(fitness, mc_params.total_EVs, 1));
         max_num = max(driving.num);
         if max_num == 0; continue; end % Skip day if no one drives
-
         % how many minutes for all cars.
         fitness = pdf_travel.mins_per_trip.fitness;
         driving.minutes = int32(RandByPDF(fitness, mc_params.total_EVs, max_num));
@@ -63,24 +57,51 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
         for EV = 1:mc_params.total_EVs
             driving_freq = driving.num(EV);
             if driving_freq == 0; continue; end % Skip EV if it doesn't drive
-
+            
+            % Get this EV's trips for the day
             driving_start = driving.time_start(EV, 1:driving_freq);
             driving_end = driving.time_end(EV, 1:driving_freq);
+            driving_km = driving.km_per_trv(EV, 1:driving_freq);
+            driving_mins = driving.minutes(EV, 1:driving_freq);
+            
+            % Sort trips by start time
             [driving_start, order_index] = sort(driving_start);
             driving_end = driving_end(order_index);
+            driving_km = driving_km(order_index);
+            driving_mins = driving_mins(order_index);
             
-            v_start_mins = repmat(driving_start', 1, mc_params.total_periods);
-            v_end_mins = repmat(driving_end', 1, mc_params.total_periods);
-            v_tperiods = repmat(1:mc_params.total_periods, driving_freq, 1);
+            % *** NEW LOGIC TO FIX THE "DOUBLE RANDOMIZATION" BUG ***
             
-            isDriving1 = (v_start_mins <= v_tperiods);
-            isDriving2 = (v_tperiods <= v_end_mins);
-            isDriving = logical(isDriving1 .* isDriving2);
+            % Initialize day profiles as zeros
+            Driving_profile_day = false(1, mc_params.total_periods);
+            v_driving_km_pp_day = zeros(1, mc_params.total_periods, 'single');
             
-            Driving_profile_day = logical(sum(isDriving, 1));
+            % Loop over each trip this EV makes today
+            for trip = 1:driving_freq
+                s_min = driving_start(trip);
+                e_min = driving_end(trip);
+                
+                % Handle trips that go past midnight (clamp to end of day)
+                if s_min > mc_params.total_periods; continue; end % Trip starts tomorrow
+                e_min = min(e_min, mc_params.total_periods); % Clamp end
+                if s_min >= e_min; continue; end % Invalid trip
+                
+                % Mark periods as driving
+                Driving_profile_day(s_min:e_min) = true;
+                
+                % Calculate km per minute for THIS trip
+                % Use the actual duration from the start/end times
+                actual_duration_mins = (e_min - s_min) + 1;
+                trip_km = driving_km(trip);
+                km_per_min = trip_km / single(actual_duration_mins);
+                
+                % Assign the km-per-minute to the correct periods
+                v_driving_km_pp_day(s_min:e_min) = km_per_min;
+            end
             
-            % Call our new pure helper functions
-            v_driving_km_pp_day = Mileage(Driving_profile_day, pdf_travel);
+            % *** END OF NEW LOGIC ***
+            
+            % This calculation is now correct and uses the *intended* km
             v_driving_cost_power_day = v_driving_km_pp_day .* power_consume_per_km;
             
             % Assign day's profile to the annual 'behaviours' struct
@@ -91,9 +112,11 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
     end
     
     %% 4. Calculate Charging and SOC
+    % (This section remains unchanged, as it depends on the profiles
+    % we just fixed in Section 3)
+    
     v_able_charge = ~behaviours.v_is_driving;
     behaviours.ev_charged = single(behaviours.v_is_charging * behaviours.ev_w_charged);
-
     for EV = 1:mc_params.total_EVs
         arr_ev_state = int8((v_able_charge(EV, :) * 2) + behaviours.v_is_driving(EV, :));
         k = Int32_Find([true, diff(arr_ev_state) ~= 0, true]);
@@ -124,8 +147,11 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
                 behaviours.v_is_driving(EV, start_index:end_index) = new_is_driving;
                 
                 % Recalculate cost/km based on updated driving status
-                behaviours.v_driving_km_pp(EV, start_index:end_index) = Mileage(new_is_driving, pdf_travel);
-                behaviours.v_driving_cost_power(EV, start_index:end_index) = behaviours.v_driving_km_pp(EV, start_index:end_index) .* power_consume_per_km;
+                % If driving is stopped, km should be 0
+                behaviours.v_driving_km_pp(EV, start_index:end_index) = ...
+                    behaviours.v_driving_km_pp(EV, start_index:end_index) .* new_is_driving;
+                behaviours.v_driving_cost_power(EV, start_index:end_index) = ...
+                    behaviours.v_driving_km_pp(EV, start_index:end_index) .* power_consume_per_km;
 
             elseif ismember(index, charge_pi)
                 if soc_start < battery_EV.lowest_soc

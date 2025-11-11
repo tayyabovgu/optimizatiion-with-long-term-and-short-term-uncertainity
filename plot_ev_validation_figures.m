@@ -1,10 +1,4 @@
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% plot_ev_validation_figures.m
-%
-% This script loads the detailed debug data from a generated .mat file
-% (e.g., EV_trend_h1.mat) and creates plots to validate the
-% E-Mobility simulation logic.
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 clc;
 clear;
 close all;
