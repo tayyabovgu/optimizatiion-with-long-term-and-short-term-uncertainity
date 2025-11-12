@@ -1,7 +1,5 @@
 function Results_Grid = Deterministic_main1(y, cost, Grid, Bat, heat, opt, ANZ, NET, mpc, NOD, PROF, LIN, H2)
-    % STAGE 1: Deterministic Optimization (Sec 2.2.1)
-    % v19: FINAL. Fixes 'cone' error, 'H2.decay' bug, 'LIN.Imax' bug,
-    %      and all other paper-alignment flaws.
+
     
     SpConstraints = [];
     
@@ -15,13 +13,7 @@ function Results_Grid = Deterministic_main1(y, cost, Grid, Bat, heat, opt, ANZ, 
     SpConstraints = [SpConstraints,Grid.fc_cap(1,y)>=0, Grid.fc_cap(1,y)<=2500];
     SpConstraints = [SpConstraints,Grid.ELEZ_cap(1,y)>=0, Grid.ELEZ_cap(1,y)<=5000];
     SpConstraints = [SpConstraints,Grid.H2_Capa(1,y)>=0, Grid.H2_Capa(1,y)<=5000];
-    
-    % NOTE: The 'CHP' struct is not passed in v20, so this constraint
-    % is correctly removed. The 'base_CHP' struct is created but
-    % never used, which is correct as CHP is disabled.
-    % SpConstraints = [SpConstraints,CHP.P_CHP_cap(1,y) == 0]; % CHP Disabled
-    
-    % --- Grid Constraints ---
+        % --- Grid Constraints ---
     SpConstraints = [SpConstraints,(0.9*400)^2 <= Grid.V(2:end,:) <= (1.1*400)^2]; 
     SpConstraints = [SpConstraints,Grid.V(1,:) == 400^2]; 
     SpConstraints = [SpConstraints, Grid.L <= repmat( (LIN.Imax(1:ANZ.L).^2), 1, opt.Horizon )]; 
@@ -93,7 +85,7 @@ function Results_Grid = Deterministic_main1(y, cost, Grid, Bat, heat, opt, ANZ, 
                       (Grid.L(l,k)+Grid.V(NET.zK(l),k)))];
          end
          
-         % *** CONE FIX: Moved Inverter Constraints inside the loop ***
+         % Moved Inverter Constraints inside the loop 
          SpConstraints = [SpConstraints, -Grid.PV(k) * tan_phi <= Grid.PV_q(k) <= Grid.PV(k) * tan_phi];
          SpConstraints = [SpConstraints, cone([Grid.PV(k); Grid.PV_q(k)], Grid.pv_cap(1,y))];
          SpConstraints = [SpConstraints, -Grid.wind_p(k) * tan_phi <= Grid.wind_q(k) <= Grid.wind_p(k) * tan_phi];
@@ -122,12 +114,12 @@ function Results_Grid = Deterministic_main1(y, cost, Grid, Bat, heat, opt, ANZ, 
         SpConstraints = [SpConstraints,heat.TmprtrToRev(i,:) == heat.coefficient(i).*(heat.TmprtrFromRev(i,:)+heat.SituationTempreture)-heat.SituationTempreture];
         SpConstraints = [SpConstraints,heat.TmprtrToDir(i,:) == heat.coefficient(i).*(heat.TmprtrFromDir(i,:)+heat.SituationTempreture)-heat.SituationTempreture];
     end
-    % --- Storage Constraints (Inter-temporal) ---
+    % Storage Constraints (Inter-temporal)
     for k=2:opt.Horizon
         SpConstraints = [SpConstraints,Bat.bat_store(:,k)==(1-Bat.bat_decay)*Bat.bat_store(:,k-1)...
             + Bat.eta*(Bat.Pbatt_ch(:,k)) - (1/Bat.eta)*Bat.Pbatt_dis(:,k)]; 
         SpConstraints = [SpConstraints,heat.th_store(:,k)==(1-heat.th_decay)*heat.th_store(:,k-1)+(1-heat.th_loss)*(heat.th_in(:,k))-1/(1-heat.th_loss)*heat.th_out(:,k)];    
-        % *** H2 BUG FIX ***
+
         SpConstraints = [SpConstraints,Grid.H2_store(:,k)==(1-H2.decay)*Grid.H2_store(:,k-1)+(1-H2.loss)*(Grid.h2ch(:,k))-1/(1-H2.loss)*Grid.h2dch(:,k)];          
     end            
     SpConstraints = [SpConstraints,sum(Bat.Pbatt_dis)-sum(Bat.Pbatt_ch)==0];
@@ -145,8 +137,7 @@ function Results_Grid = Deterministic_main1(y, cost, Grid, Bat, heat, opt, ANZ, 
     wind_inv   = Grid.wind_cap(1,y).*cost.wind_capital_ann;
     Inv = bat_inv+PV_inv+hp_inv+TH_inv+fc_inv+ELEZ_inv+wind_inv+H2_inv;
     
-    % Operational Cost (C_op) (Eq 2.7)
-    % *** SCALING FIX: Multiply 24-hr cost by (8760/24) to get annual cost ***
+    % Multiply 24-hr cost by (8760/24) to get annual cost
     Grid_ope= sum(Grid.P_import(1,:).*cost.price) * (8760 / opt.Horizon);
     
     Op_cost_DERs = (Bat.battCapa(1,y)*cost.bat_op_cost) + ...
@@ -160,8 +151,7 @@ function Results_Grid = Deterministic_main1(y, cost, Grid, Bat, heat, opt, ANZ, 
     
     sub_pro = Grid_ope + Op_cost_DERs; % Op_cost_DERs is already annual
     
-    % CO2 Penalty Cost (C_penalty,co2) (Eq 2.8)
-    % *** SCALING FIX: Multiply 24-hr emissions by (8760/24) ***
+    % SCALING FIX: Multiply 24-hr emissions by (8760/24)
     CO2_all_year = (sum(Grid.P_import(1,:)) * (8760 / opt.Horizon) * cost.CO2grid_kg_per_kWh) * cost.cCO2_per_kg; 
     
     % Total Objective (Eq 2.5)

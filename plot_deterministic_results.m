@@ -1,9 +1,4 @@
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% plot_deterministic_results.m
-%
-% This script loads the results from STAGE 1 and plots the
-% deterministic figures (3.7, 3.8, and 3.9).
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 clc; clear; close all;
 fprintf('--- Generating Deterministic Figures (3.7, 3.8, 3.9) ---\n');
 results_folder = 'Results';
@@ -31,7 +26,7 @@ catch
     error('Could not load results files. Did MAIN_Run_... complete successfully?');
 end
 
-%% --- Generate Figure 3.8: Overall cost... for different scenarios ---
+%% Overall cost... for different scenarios ---
 figure('Name', 'Figure 3.8: Overall Cost of Settlement Area');
 plot(years, results_neg.total_cost / 1000, 'b-o', 'LineWidth', 1.5, 'MarkerFaceColor', 'b');
 hold on;
@@ -48,7 +43,7 @@ xlim([min(years), max(years)]);
 ylim([min(results_neg.total_cost / 1000) - 2, max(results_pos.total_cost / 1000) + 2]);
 fprintf('Generated Figure 3.8.\n');
 
-%% --- Generate Figure 3.9: Cost analysis of microgrid (Trend) ---
+%% Cost analysis of microgrid (Trend) ---
 figure('Name', 'Figure 3.9: Cost Analysis (Trend Scenario)');
 % Data format is [3 x 10] (Inv; Op; CO2)
 costs_trend_k = results_trend.costs / 1000; % Convert to thousands
@@ -63,7 +58,7 @@ xlim([min(years)-0.5, max(years)+0.5]);
 ylim([0, max(sum(costs_trend_k, 1)) * 1.1]); % Set Y-limit to 10% above max
 fprintf('Generated Figure 3.9.\n');
 
-%% --- Generate Figure 3.7: Microgrid capacity (Trend) ---
+%%  Microgrid capacity (Trend) ---
 figure('Name', 'Figure 3.7: Microgrid Capacity (Trend Scenario)');
 % Data format is [8 x 10]
 % [PV; Wind; EESS; HP; TESS; FC; Elec; HESS]

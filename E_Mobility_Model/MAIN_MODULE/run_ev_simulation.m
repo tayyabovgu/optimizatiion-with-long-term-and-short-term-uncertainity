@@ -1,5 +1,5 @@
 function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
-    %% 1. Initialize Local Parameters
+    %% Initialize Local Parameters
     mc_params.days = 365;
     mc_params.periods_per_day = 1440;
     mc_params.mins_per_period = (24 * 60) / mc_params.periods_per_day;
@@ -18,7 +18,7 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
     battery_EV.fcharge_periods = ceil(battery_EV.fcharge_minutes);
     battery_EV.full_soc = 0.9;
     battery_EV.lowest_soc = 0.85;
-    %% 2. Initialize Behavior Struct
+    %%  Initialize Behavior Struct
     behaviours.v_is_driving = false(mc_params.total_EVs, mc_params.total_periods_year);
     behaviours.v_is_charging = false(mc_params.total_EVs, mc_params.total_periods_year);
     behaviours.v_driving_km_pp = zeros(mc_params.total_EVs, mc_params.total_periods_year);
@@ -26,7 +26,7 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
     behaviours.ev_w_charged = mc_params.mins_per_period / 60 * PCS;
     behaviours.soc = repmat(mc_params.eday_soc, 1, mc_params.total_periods_year); % Pre-fill SOC
     
-    %% 3. Start the Simulation
+    %% Start the Simulation
     for d = 1:mc_params.days
         start_mins = 24 * 60 * (d - 1) + 1;
         end_mins = 24 * 60 * (d - 1) + mc_params.total_periods;
@@ -99,12 +99,10 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
                 v_driving_km_pp_day(s_min:e_min) = km_per_min;
             end
             
-            % *** END OF NEW LOGIC ***
+       
             
-            % This calculation is now correct and uses the *intended* km
             v_driving_cost_power_day = v_driving_km_pp_day .* power_consume_per_km;
             
-            % Assign day's profile to the annual 'behaviours' struct
             behaviours.v_is_driving(EV, start_mins:end_mins) = Driving_profile_day;
             behaviours.v_driving_km_pp(EV, start_mins:end_mins) = v_driving_km_pp_day;
             behaviours.v_driving_cost_power(EV, start_mins:end_mins) = v_driving_cost_power_day;
@@ -112,9 +110,7 @@ function [behaviours] = run_ev_simulation(PCS, nEV, chargetime, pdf_travel)
     end
     
     %% 4. Calculate Charging and SOC
-    % (This section remains unchanged, as it depends on the profiles
-    % we just fixed in Section 3)
-    
+
     v_able_charge = ~behaviours.v_is_driving;
     behaviours.ev_charged = single(behaviours.v_is_charging * behaviours.ev_w_charged);
     for EV = 1:mc_params.total_EVs

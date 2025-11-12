@@ -6,17 +6,17 @@ yalmip('clear');
 fprintf('--- Starting Holistic Optimization Workflow ---\n');
 fprintf('*** RUNNING IN 10-YEAR "REPRESENTATIVE DAY" MODE (24-hour horizon) ***\n');
 
-%% ### 0. SETUP PATHS AND PARAMETERS ###
+%%  SETUP PATHS AND PARAMETERS
 % -------------------------------------------------------------------------
 fprintf('\n--- Section 0: Checking Setup, Paths, and Data ---\n');
 try
-    % --- 1. Check YALMIP and Solver ---
+    % Check YALMIP and Solver
     fprintf('Checking YALMIP and solver...\n');
     yalmiptest; 
     fprintf('  -> VISUAL CHECK: Please confirm from the table above that GUROBI shows "Success" for SOCP and MISOCP.\n');
     fprintf('  -> Proceeding based on visual confirmation...\n');
     
-    % --- 2. Define and Check Folders ---
+    % Define and Check Folders
     functions_folder = 'functions';
     ev_data_folder = 'E_Mobility_Data';
     results_folder = 'Results';
@@ -37,13 +37,13 @@ try
        fprintf('  -> Created ''/Results/'' folder.\n');
     end
     
-    % --- 3. Check for Core Function 'Allp.m' ---
+    %  Check for Core Function 'Allp.m' 
     if ~exist('Allp.m', 'file')
         error('FUNCTION_ERROR: ''Allp.m'' not found. Is it inside the ''%s'' folder?', functions_folder);
     end
     fprintf('  -> Found ''Allp.m''.\n');
     
-    % --- 4. Check for E-Mobility Data Files ---
+    % Check for E-Mobility Data Files
     scenarios_to_run = {'Negative', 'Trend', 'Positive'};
     for s_check = 1:length(scenarios_to_run)
         scenario_file = sprintf('EV_%s_h1.mat', lower(scenarios_to_run{s_check}));
@@ -54,7 +54,7 @@ try
     end
     fprintf('  -> All E-Mobility data files found in ''%s''.\n', ev_data_folder);
 
-    % --- Set Horizon to 24 hours (Representative Day) ---
+    % Set Horizon to 24 hours (Representative Day)
     opt.Horizon = 24; 
     opt.Period = 10;
     budget_factors_to_run = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8];
@@ -70,7 +70,7 @@ try
     path = Allp(SetC);
     fprintf('  -> Paths from Allp.m loaded successfully.\n');
     
-    % --- 6. Check for Data Files loaded by Allp.m ---
+    % Check for Data Files loaded by Allp.m
     if ~exist(fullfile(path.dat1, 'LoadDat.m'), 'file')
         error('DATA_ERROR: Cannot find ''LoadDat.m'' in the path specified by Allp.m: %s', path.dat1);
     end
@@ -90,9 +90,7 @@ catch ME
     rethrow(ME); % Rethrow the error to stop the script
 end
 
-% --- Initialize Base Parameters (Nodes, Grid, etc.) ---
-% *** FIX (v26) ***
-% Added 'base_CHP' as the 5th output argument to match the
+% Initialize Base Parameters (Nodes, Grid, etc.) 
 % function definition, which returns 13 arguments.
 [base_cost, base_Grid, base_Bat, base_heat, base_CHP, base_opt, ...
  base_ANZ, base_NET, base_mpc, base_NOD, base_PROF, base_LIN, base_H2] = ...
@@ -100,7 +98,7 @@ end
 fprintf('Base optimization parameters and YALMIP variables initialized.\n');
 fprintf('--- Section 0: Setup Complete. ---\n');
 
-%% ### STAGE 1: RUN DETERMINISTIC OPTIMIZATION (All Scenarios) ###
+%% RUN DETERMINISTIC OPTIMIZATION (All Scenarios)
 % -------------------------------------------------------------------------
 fprintf('\n--- STAGE 1: Running Deterministic Optimization (All Scenarios) ---\n');
 tic;
@@ -132,7 +130,7 @@ for s = 1:length(scenarios_to_run)
         
         year_data = EV_beh{y};
         
-        % --- Average 8760-hour EV data down to 24-hour representative day ---
+        % Average 8760-hour EV data down to 24-hour representative day 
         private_load_8760 = year_data.Private_Load_kW;
         public_load_8760 = year_data.Public_Load_kW;
         
@@ -149,7 +147,7 @@ for s = 1:length(scenarios_to_run)
         end
         Grid.EV_load = Grid.EV_load_public_avg; % [1 x 24]
         
-        % --- Run the deterministic optimization function ---
+        % Run the deterministic optimization function 
         Results = Deterministic_main1(y, cost, Grid, base_Bat, base_heat, ...
                                       base_opt, base_ANZ, base_NET, base_mpc, ...
                                       base_NOD, base_PROF, base_LIN, base_H2);
@@ -173,7 +171,7 @@ end
 Deterministic_Run_Time = toc;
 fprintf('\n--- STAGE 1 Complete (Total Time: %.2f s) ---\n', Deterministic_Run_Time);
 
-%% ### STAGE 2: RUN IGDM STOCHASTIC (Trend Scenario Only) ###
+%%  RUN IGDM STOCHASTIC (Trend Scenario Only) 
 % -------------------------------------------------------------------------
 fprintf('\n--- STAGE 2: Running IGDM Stochastic (Trend Scenario, %d Budgets) ---\n', length(budget_factors_to_run));
 load(fullfile(results_folder, 'deterministic_results_trend.mat'), 'obj1_deterministic_cost', 'Deterministic_Results');

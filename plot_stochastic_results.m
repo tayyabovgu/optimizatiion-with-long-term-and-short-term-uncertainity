@@ -44,36 +44,35 @@ catch ME
     error('Could not load all required .mat files. Please run MAIN_Run_Holistic_Optimization.m first. Error: %s', ME.message);
 end
 
-%% --- Figure V3: Holistic Potential (Optimized vs. Grid-Only) ---
+%% --- Holistic Potential (Optimized vs. Grid-Only) ---
 % Calculates the cost of a "Grid-Only" (no DERs) scenario
 % and compares it to our optimized deterministic plan.
 % -------------------------------------------------------------------------
 fprintf('Generating Figure V3: Holistic Potential...\n');
-% 1. Calculate Total Hourly Load for Year 10
+% Calculate Total Hourly Load for Year 10
 %    (NOD.PLoadProf is 35x8760, cost.price is 1x8760)
 P_load_base_hourly = sum(NOD.PLoadProf, 1); % [1x8760]
 P_load_ev_hourly = EV_Data_Year_10.Private_Load_kW + EV_Data_Year_10.Public_Load_kW; % [1x8760]
 P_load_total_hourly = P_load_base_hourly + P_load_ev_hourly;
 
-% 2. Calculate Grid-Only Costs
+%  Calculate Grid-Only Costs
 % (We assume public EVCSs are built, so Inv cost is for EVCS only)
 GridOnly_InvCost = cost.EVCS_capital_ann * 3; % 3 stations in Year 10
 GridOnly_OpCost = sum(P_load_total_hourly .* cost.price);
 GridOnly_CO2Cost = (sum(P_load_total_hourly) * cost.CO2grid_kg_per_kWh) * cost.cCO2_per_kg;
 Cost_GridOnly = [GridOnly_InvCost; GridOnly_OpCost; GridOnly_CO2Cost];
 
-% 3. Get Optimized Costs (from our results file)
+% Get Optimized Costs (from our results file)
 % (We add the base EVCS cost, which was not in the deterministic 'Inv')
 Cost_Optimized_With_EVCS = Cost_Optimized + [cost.EVCS_capital_ann * 3; 0; 0];
 
 
-% 4. Plot the comparison
+% Plot the comparison
 figure('Name', 'Figure V3: Holistic Potential (Year 2031)');
 bar_data = [Cost_GridOnly, Cost_Optimized_With_EVCS] / 1000; % Convert to k€
 b = bar(bar_data, 'stacked');
 
-% *** FIX (v2) ***
-% Defensively set colors to prevent crash if a row is all zeros
+
 if length(b) >= 1
     b(1).FaceColor = [0.8 0 0];    % Investment
 end
@@ -115,7 +114,7 @@ ylabel('Installed Capacity (kW, kWh, or m³)');
 set(gca, 'XTickLabel', DER_Labels);
 legend('Deterministic Plan (0% Robust)', 'Stochastic Plan (100% Robust)', 'Location', 'northwest');
 
-%% --- Figure V5: The Decision-Maker's Trade-Off ---
+%% The Decision-Maker's Trade-Off ---
 % Plots the "cost of robustness," showing how much robustness (Alpha)
 % is "bought" for each increase in the total budget.
 % -------------------------------------------------------------------------

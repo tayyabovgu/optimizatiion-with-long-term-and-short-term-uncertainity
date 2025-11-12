@@ -1,16 +1,9 @@
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% plot_static_paper_data.m
-%
-% This script generates plots based on static data provided in the paper.
-% - Figure 2.7: Trend for the cost of CO2
-% - Figure 2.8: GHG emission by electricity grid
-% - Figure 3.1: Number of newly registered EVs
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 clc; clear; close all;
 
 fprintf('Generating plots from static paper data...\n');
 
-%% --- Figure 2.7: Trend for the cost of CO2 per ton ---
+%% Trend for the cost of CO2 per ton ---
 %
 figure('Name', 'Figure 2.7: CO2 Cost Trend');
 years_co2 = 2021:2:2031;
@@ -22,7 +15,7 @@ xlabel('Years');
 ylabel('Cost in €/ton');
 ylim([0, 100]);
 
-%% --- Figure 2.8: GHG emission by electricity grid ---
+%%GHG emission by electricity grid 
 %
 figure('Name', 'Figure 2.8: GHG Emission Trend');
 % Data estimated from Fig 2.8
@@ -35,7 +28,7 @@ ylabel('CO2 emission in g/kWh');
 ylim([0, 800]);
 xlim([1990, 2030]);
 
-%% --- Figure 3.1: Number of newly registered EVs ---
+%% Number of newly registered EVs 
 %
 figure('Name', 'Figure 3.1: Newly Registered EVs');
 try

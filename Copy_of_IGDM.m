@@ -1,12 +1,6 @@
-
-
 function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mpc, Deterministic_Caps, NOD, PROF, LIN, H2)
-    % STAGE 2: Stochastic (IGDM) Optimization (Sec 2.2.2)
-    % v19: FINAL. Fixes all flaws.
-    
     SpConstraints = [];
-    
-    % --- Define Constraints for all assets ---
+        % --- Define Constraints for all assets ---
     SpConstraints = [SpConstraints,Bat.battCapa(1,y) >= Deterministic_Caps(3)];
     SpConstraints = [SpConstraints,Grid.pv_cap(1,y) >= Deterministic_Caps(1)];
     SpConstraints = [SpConstraints,Grid.wind_cap(1,y) >= Deterministic_Caps(2)];
@@ -15,8 +9,7 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
     SpConstraints = [SpConstraints,Grid.fc_cap(1,y) >= Deterministic_Caps(6)];
     SpConstraints = [SpConstraints,Grid.ELEZ_cap(1,y) >= Deterministic_Caps(7)];
     SpConstraints = [SpConstraints,Grid.H2_Capa(1,y) >= Deterministic_Caps(8)];
-    
-    SpConstraints = [SpConstraints,Bat.battCapa(1,y)<=10000];
+        SpConstraints = [SpConstraints,Bat.battCapa(1,y)<=10000];
     SpConstraints = [SpConstraints,Grid.pv_cap(1,y)<=3000];
     SpConstraints = [SpConstraints,Grid.wind_cap(1,y)<=1000];
     SpConstraints = [SpConstraints,heat.hp_cap(1,y)<=5000];
@@ -25,7 +18,7 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
     SpConstraints = [SpConstraints,Grid.ELEZ_cap(1,y)<=5000];
     SpConstraints = [SpConstraints,Grid.H2_Capa(1,y)<=5000];
     % SpConstraints = [SpConstraints,CHP.P_CHP_cap(1,y) == 0]; % CHP Disabled
-    % --- IGDM Constraints (Eq 2.27 - 2.33) ---
+    %  IGDM Constraints 
     SpConstraints = [SpConstraints, 0 <= Grid.alpha(1,y) <= 1]; %
     
     % --- Grid Constraints ---
@@ -66,11 +59,11 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
     
     % --- Power Flow and Heat Flow (Loop over Horizon) ---
     for k = 1:opt.Horizon
-         % --- SOCP Power Flow (FLAW 4) ---
+         % --- SOCP Power Flow ---
          SpConstraints = [SpConstraints, Grid.P_in(:,k) == -Grid.finc*Grid.P_br(:,k) + Grid.inc*Grid.P_br(:,k)]; %
          SpConstraints = [SpConstraints, Grid.Q_in(:,k) == -Grid.finc*Grid.Q_br(:,k) + Grid.inc*Grid.Q_br(:,k)]; %
          
-         % Nodal Active Power Balance (FLAW 3 FIX)
+         % Nodal Active Power Balance 
          SpConstraints = [SpConstraints, Grid.P_in(:,k) + ...
              Grid.P_import_IncMatrix.*(Grid.P_import(:,k)) + ... % Grid Import
              Grid.PV_PIncMatrix.*(Grid.PV(:,k)) + ...
@@ -83,7 +76,7 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
              Grid.powerelezIncMatrix.*(Grid.Pelez(:,k)) + ...
              Grid.EVCSIncMatrix.*Grid.EV_load(1,k)]; 
          
-         % Nodal Reactive Power Balance (FLAW 1 & 3 FIX)
+         % Nodal Reactive Power Balance 
          SpConstraints = [SpConstraints, Grid.Q_in(:,k) + ...
              Grid.Q_import_IncMatrix.*(Grid.Q_import(:,k)) + ... % Grid Import
              Grid.PV_PIncMatrix.*(Grid.PV_q(:,k)) + ...
@@ -93,7 +86,7 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
              == Grid.Qload(:,k)];
          
          SpConstraints = [SpConstraints, Grid.V(NET.zK,k) == Grid.V(NET.vK,k) ...
-             - 2*(Grid.R_Line.*Grid.P_br(:,k) + Grid.X_Line.*Grid.Q_br(:,k)) ... % Typo fix: Q_br not Q_ch
+             - 2*(Grid.R_Line.*Grid.P_br(:,k) + Grid.X_Line.*Grid.Q_br(:,k)) ...
              + (Grid.R_Line.^2 + Grid.X_Line.^2).*Grid.L(:,k)]; %
              
          for l = 1:ANZ.L
@@ -102,7 +95,7 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
                       (Grid.L(l,k)+Grid.V(NET.zK(l),k)))]; %
          end
          
-         % *** CONE FIX (FLAW 1): Moved Inverter Constraints inside the loop ***
+         %  Moved Inverter Constraints inside the loop
          SpConstraints = [SpConstraints, -Grid.PV(k) * tan_phi <= Grid.PV_q(k) <= Grid.PV(k) * tan_phi];
          SpConstraints = [SpConstraints, cone([Grid.PV(k); Grid.PV_q(k)], Grid.pv_cap(1,y))];
          SpConstraints = [SpConstraints, -Grid.wind_p(k) * tan_phi <= Grid.wind_q(k) <= Grid.wind_p(k) * tan_phi];
@@ -131,7 +124,7 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
         SpConstraints = [SpConstraints,heat.TmprtrToRev(i,:) == heat.coefficient(i).*(heat.TmprtrFromRev(i,:)+heat.SituationTempreture)-heat.SituationTempreture];
         SpConstraints = [SpConstraints,heat.TmprtrToDir(i,:) == heat.coefficient(i).*(heat.TmprtrFromDir(i,:)+heat.SituationTempreture)-heat.SituationTempreture];
     end
-    % --- Storage Constraints (Inter-temporal) ---
+    % --- Storage Constraints (Inter-temporal)
     for k=2:opt.Horizon
         SpConstraints = [SpConstraints,Bat.bat_store(:,k)==(1-Bat.bat_decay)*Bat.bat_store(:,k-1)...
             + Bat.eta*(Bat.Pbatt_ch(:,k)) - (1/Bat.eta)*Bat.Pbatt_dis(:,k)]; %
@@ -157,8 +150,8 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
     
     Inv_Uncertain = Grid.alpha(1,y) * Grid.nEVCS_base * cost.EVCS_capital_ann; %
     
-    % Operational Cost (C_op) (Eq 2.7)
-    % *** SCALING FIX: Multiply 24-hr cost by (8760/24) to get annual cost ***
+    
+    % : Multiply 24-hr cost by (8760/24) to get annual cost
     Grid_ope= sum(Grid.P_import(1,:).*cost.price) * (8760 / opt.Horizon);
     
     Op_cost_DERs = (Bat.battCapa(1,y)*cost.bat_op_cost) + ...
@@ -171,15 +164,14 @@ function Results_Grid = Copy_of_IGDM(y, cost, Grid, Bat, heat, opt, ANZ, NET, mp
                    (Grid.wind_cap(1,y)*cost.wind_op_cost);
     
     sub_pro = Grid_ope + Op_cost_DERs;
-    % CO2 Penalty Cost (C_penalty,co2) (Eq 2.8)
-    % *** SCALING FIX: Multiply 24-hr emissions by (8760/24) ***
+    %  Multiply 24-hr emissions by (8760/24)
     CO2_all_year = (sum(Grid.P_import(1,:)) * (8760 / opt.Horizon) * cost.CO2grid_kg_per_kWh) * cost.cCO2_per_kg; %
     % Total Cost (for the constraint)
     Objective1 = Inv + sub_pro + CO2_all_year;
     
-    % Budget Constraint (Eq 2.31)
+    % Budget Constraint
     SpConstraints = [SpConstraints, Objective1 + Inv_Uncertain <= Grid.obj_budget]; %
-    % IGDM Objective (Eq 2.30)
+    % IGDM Objective 
     Objective = -Grid.alpha(1,y); %
     %% --- Solve Optimization ---
     ops = sdpsettings('solver','gurobi', 'verbose', 0);

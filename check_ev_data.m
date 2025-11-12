@@ -64,4 +64,3 @@ xlim([min(years), max(years)]);
 xticks(years);
 xtickangle(45);
 
-fprintf('\nPlots generated. Check the figures.\n');

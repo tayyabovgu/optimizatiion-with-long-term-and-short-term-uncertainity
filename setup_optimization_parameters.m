@@ -1,5 +1,4 @@
 function [cost, Grid, Bat, heat, CHP, opt, ANZ, NET, mpc, NOD, PROF, LIN, H2] = setup_optimization_parameters(opt, path, SetC, Scenario, EV)
-    % v24: Fixes the 'repmat' heat load assignment bug.
     %% Load Data
     assignin('base', 'Scenario', Scenario);
     assignin('base', 'EV', EV); 

@@ -12,7 +12,7 @@ WEEK_TO_PLOT = 12; % Plot a sample week (e.g., 12th week)
 
 fprintf('Loading data from: %s, Year: %d\n', SCENARIO_FILE, YEAR_TO_PLOT);
 
-%% --- Load Data ---
+%% Load Data 
 try
     load(fullfile(ev_data_folder, SCENARIO_FILE), 'EV_beh');
 catch
@@ -21,7 +21,7 @@ end
 
 year_data = EV_beh{YEAR_TO_PLOT};
 
-% --- Check if debug data exists ---
+% Check if debug data exists
 if ~isfield(year_data, 'debug_soc_1min')
     error(['The file %s does not contain debug data.' ...
            'Please set DEBUG_SAVE_DETAILS = true in MAIN_create_all_scenarios.m and run it again.'], ...
@@ -30,7 +30,7 @@ end
 
 fprintf('Data loaded. Generating validation plots for Week %d...\n', WEEK_TO_PLOT);
 
-%% --- Prepare Data for Plotting (1 Week) ---
+%%  Prepare Data for Plotting (1 Week)
 
 % Hourly data (168 hours)
 week_start_hr = (WEEK_TO_PLOT - 1) * 7 * 24 + 1;
@@ -42,7 +42,6 @@ week_start_min = (WEEK_TO_PLOT - 1) * 7 * 24 * 60 + 1;
 week_end_min = week_start_min + (7 * 24 * 60) - 1;
 time_axis_mins = 1:(168*60);
 
-% --- Extract 1-week slices ---
 
 % Single EV, 1-minute data
 driving_week_1min = year_data.debug_driving_1min(EV_TO_PLOT, week_start_min:week_end_min);
@@ -55,7 +54,7 @@ public_load_week_1hr = year_data.Public_Load_kW(week_start_hr:week_end_hr);
 public_queue_week_1hr = year_data.Public_Waiting_Time_hrs(week_start_hr:week_end_hr);
 
 
-%% --- Figure 1: Single EV Behavior (1-minute resolution) ---
+%%  Single EV Behavior (1-minute resolution) 
 % This figure proves the core logic: driving depletes SOC,
 % and low SOC at home triggers charging.
 f1 = figure('Name', 'Figure V1: Single EV Logic Validation (1 Week)');
@@ -94,20 +93,20 @@ xlim([0, max(time_axis_mins)]);
 % Link axes
 linkaxes([ax1, ax2, ax3], 'x');
 
-%% --- Figure 2: Aggregated Community Load (1-hour resolution) ---
+%% Aggregated Community Load (1-hour resolution) 
 % This figure validates the aggregated hourly loads fed into the
 % optimization model.
 f2 = figure('Name', 'Figure V2: Aggregated Load Validation (1 Week)');
 f2.Position = [150, 150, 900, 500];
 
-% Panel 1: Aggregated Private Load
+% Aggregated Private Load
 ax4 = subplot(2,1,1);
 bar(time_axis_hours, private_load_week_1hr, 'FaceColor', [0 0.4470 0.7410]);
 title(sprintf('Aggregated Private Load (All EVs, %s, Year %d)', SCENARIO_FILE, YEAR_TO_PLOT));
 ylabel('Power (kW)');
 xlim([0, 168]);
 
-% Panel 2: Aggregated Public Load & Queue
+% Aggregated Public Load & Queue
 ax5 = subplot(2,1,2);
 yyaxis left;
 bar(time_axis_hours, public_load_week_1hr, 'FaceColor', [0.8500 0.3250 0.0980]);
